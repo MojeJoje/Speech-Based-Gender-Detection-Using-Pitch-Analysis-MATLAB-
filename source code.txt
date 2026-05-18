@@ -1,0 +1,42 @@
+clc;
+clear;
+close all;
+
+% Parameters
+fs = 44100;        % Sampling frequency (Hz)
+recTime = 5;       % Recording duration (seconds)
+
+% Step 1: Record voice
+recObj = audiorecorder(fs, 16, 1);
+disp('🎤 Speak clearly for 5 seconds...');
+recordblocking(recObj, recTime);
+disp('Recording finished.');
+voice = getaudiodata(recObj);
+
+% Step 2: Preprocessing
+voice = voice - mean(voice);        % Remove DC offset
+voice = voice / max(abs(voice));    % Normalize amplitude
+
+% Step 3: Autocorrelation
+autoCorr = xcorr(voice);
+autoCorr = autoCorr(floor(length(autoCorr)/2):end);  % Positive lags only
+
+% Step 4: Pitch detection (human voice range)
+minF = 80;      % Minimum pitch (Hz)
+maxF = 300;     % Maximum pitch (Hz)
+minLag = floor(fs / maxF);
+maxLag = floor(fs / minF);
+[~, idx] = max(autoCorr(minLag:maxLag));
+pitchLag = idx + minLag - 1;
+pitchFreq = fs / pitchLag;
+
+% Step 5: Gender classification
+if pitchFreq < 165
+    gender = 'Male';
+else
+    gender = 'Female';
+end
+
+% Step 6: Display results
+fprintf('\nEstimated Pitch: %.2f Hz\n', pitchFreq);
+fprintf('Detected Gender: %s\n\n', gender);
